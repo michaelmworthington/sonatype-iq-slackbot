@@ -30,18 +30,33 @@ func iqRecommend(w http.ResponseWriter, r *http.Request) {
 		case "/iq-recommend":
 			w.WriteHeader(http.StatusOK)
 
-			rr := lookupRecommendation(s.Text)
+			mavenCoordinate, err := ParseMavenCoordinate(s.Text)
+			if (err != nil) {
+				log.Printf("[DEBUG] %s\n", err)
 
-			if (len(rr.Remediation.VersionChanges) == 0) {
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte("No recommendation found for: " + s.Text))
+				w.Write([]byte("I didn't get that.\n"))
+				w.Write([]byte(err.Error() + "\n"))
+				w.Write([]byte("Why don't you just tell me what you're looking for.\n"))
+				w.Write([]byte("HINT: I only understand \"groupId:artifactId:version\"\n"))
 			} else {
-				//SlashCommand Struct = https://github.com/nlopes/slack/blob/master/slash.go
-				sendMessage(s.Text, 
-					s.ChannelID, 
-					rr.Remediation.VersionChanges[0].Type,
-					rr.Remediation.VersionChanges[0].Data.Component.ComponentIdentifier.Coordinates.Version,
-				    lookupAllVersions(s.Text))
+				rr := lookupRecommendation(mavenCoordinate)
+
+				if (len(rr.Remediation.VersionChanges) == 0) {
+					w.Header().Set("Content-Type", "application/json")
+					w.Write([]byte("No recommendation found for: " + s.Text))
+				} else {
+					w.Header().Set("Content-Type", "application/json")
+					w.Write([]byte("Looking up a recommendation for:" + s.Text + ". Sometimes I have to look really hard. Watch for a DM from me in a bit."))
+
+					//SlashCommand Struct = https://github.com/nlopes/slack/blob/master/slash.go
+					sendMessage(s.Text, 
+						s.ChannelID, 
+						s.UserID,
+						rr.Remediation.VersionChanges[0].Type,
+						rr.Remediation.VersionChanges[0].Data.Component.ComponentIdentifier.Coordinates.Version,
+						lookupAllVersions(mavenCoordinate))
+				}
 			}
 
 		default:
@@ -55,9 +70,16 @@ func iqRecommend(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//https://github.com/nlopes/slack/blob/master/chat.go -> https://api.slack.com/docs/formatting
-func sendMessage(pText string, pChannelID string, pRemediationType string, pRecommendedVersion string, pAllVersions []string) {
+//https://github.com/nlopes/slack/blob/master/chat.go -> https://api.slack.com/docs/formatting -> http://davestevens.github.io/slack-message-builder/
+func sendMessage(pText string, pChannelID string, pUserID string, pRemediationType string, pRecommendedVersion string, pAllVersions []string) {
 	slackAPI := slack.New(config.BotToken)
+
+	_, _, dmChannelID, err := slackAPI.OpenIMChannel(pUserID)
+
+	if err != nil {
+		log.Printf("[ERROR] %s\n", err)
+		return
+	}
 
 	attachment := slack.Attachment{
 		Text: pRecommendedVersion,
@@ -70,7 +92,7 @@ func sendMessage(pText string, pChannelID string, pRemediationType string, pReco
 	}
 
 	//todo: send to the bot
-	channelID, timestamp, err := slackAPI.PostMessage(pChannelID, 
+	channelID, timestamp, err := slackAPI.PostMessage(dmChannelID, 
 													slack.MsgOptionText("Looking up a recommendation for: " + pText, false),
 													slack.MsgOptionAttachments(allVersAttachment, attachment))
 	if err != nil {
@@ -80,7 +102,7 @@ func sendMessage(pText string, pChannelID string, pRemediationType string, pReco
 	log.Printf("Message successfully sent to channel %s at %s", channelID, timestamp)
 }
 
-func lookupRecommendation(text string) RemediationResponse {
+func lookupRecommendation(pGAV MavenCoordinate) RemediationResponse {
 	httpClient := http.Client{}
 	//url := "http://localhost:8060/iq/api/v2/organizations"
 	
@@ -89,11 +111,11 @@ func lookupRecommendation(text string) RemediationResponse {
 
 	book := CI{ComponentIdentifier: 
 		ComponentIdentifier{ Format: "maven",
-							Coordinates: MavenCoordinate{ GroupID: "org.apache.logging.log4j",
-															ArtifactID: text,
-															Classifier: "",
-															Extension : "jar",
-															Version: "2.8",
+							Coordinates: MavenCoordinate{ GroupID: pGAV.GroupID, //"org.apache.logging.log4j",
+															ArtifactID: pGAV.ArtifactID, //log4j-core
+															Classifier: pGAV.Classifier, //"",
+															Extension : pGAV.Extension, //"jar",
+															Version: pGAV.Version, //"2.8",
 														},
 							},
 	}
@@ -120,7 +142,7 @@ func lookupRecommendation(text string) RemediationResponse {
 	return remediationResponse
 }
 
-func lookupAllVersions(text string) []string {
+func lookupAllVersions(pGAV MavenCoordinate) []string {
 	httpClient := http.Client{}
 	
 	url := "http://localhost:60359/iq/api/v2/components/versions"
@@ -128,13 +150,13 @@ func lookupAllVersions(text string) []string {
 
 	book :=  
 		ComponentIdentifier{ Format: "maven",
-							Coordinates: MavenCoordinate{ GroupID: "org.apache.logging.log4j",
-															ArtifactID: text,
-															Classifier: "",
-															Extension : "jar",
-															Version: "2.8",
-														},
-	}
+							Coordinates: MavenCoordinate{ GroupID: pGAV.GroupID, //"org.apache.logging.log4j",
+								ArtifactID: pGAV.ArtifactID, //log4j-core
+								Classifier: pGAV.Classifier, //"",
+								Extension : pGAV.Extension, //"jar",
+								Version: pGAV.Version, //"2.8",
+							},
+		}
 
 	r, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(book.ToComponentIdentifierJSON()))
 	r.SetBasicAuth("admin", "admin123")
@@ -152,8 +174,8 @@ func lookupAllVersions(text string) []string {
 
 	allVersions := FromAllVersionsJSON(body)
 
-	//log.Printf("[DEBUG] Orgs: %s\n", body)
-	//log.Printf("[DEBUG] RR: %s\n", allVersions)
+	// log.Printf("[DEBUG] Orgs: %s\n", body)
+	// log.Printf("[DEBUG] RR: %s\n", allVersions)
 
 	return allVersions
 }

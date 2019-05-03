@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
 	"encoding/json"
+	"strings"
+	"regexp"
 )
 
 //CI to contain the component identifier
@@ -22,6 +25,43 @@ type MavenCoordinate struct {
 	Extension string `json:"extension"`
 	GroupID string `json:"groupId"`
 	Version string `json:"version"`
+}
+
+//ParseMavenCoordinate read a string and create a MavenCoordinate
+func ParseMavenCoordinate(pText string) (MavenCoordinate, error) {
+	var gav MavenCoordinate
+	
+	var parts = strings.Split(pText, ":")
+
+	if (len(parts) != 3) {
+		return gav, errors.New("Could not parse coordinate. Not enough parts: " + pText)
+	}
+
+	reg, err := regexp.Compile("[^a-zA-Z0-9.-]+")
+	if err != nil {
+		panic(err)
+	}
+
+	var groupID = reg.ReplaceAllString(parts[0], "")
+	var artifactID = reg.ReplaceAllString(parts[1], "")
+	var version = reg.ReplaceAllString(parts[2], "")
+
+	var badG = strings.ContainsAny(groupID, " ")
+	var badA = strings.ContainsAny(artifactID, " ")
+	var badV = strings.ContainsAny(version, " ")
+
+	if badG || badA || badV {
+		return gav, errors.New("Could not parse coordinate. They had spaces: " + pText)
+	}
+
+	gav.GroupID = groupID
+	gav.ArtifactID = artifactID
+	gav.Version = version
+	gav.Extension = "jar"
+	gav.Classifier = ""
+	
+
+	return gav, nil
 }
 
 //ToComponentIdentifierJSON to be used for marshalling of CI type

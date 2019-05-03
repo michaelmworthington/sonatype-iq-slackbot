@@ -46,38 +46,3 @@ func slackEventSubscriptions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
-//URLVerificationEvent for Slack url verification data - https://api.slack.com/events/url_verification
-// type URLVerificationEvent struct {
-// 	Token       string `json:"token"`
-// 	Challenge   string `json:"challenge"`
-// 	Type        string `json:"type"`
-// }
-
-// func writeJSON(w http.ResponseWriter, i URLVerificationEvent) {
-// 	b, err := json.Marshal(i)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	w.Header().Add("Content-Type", "application/json; charset=utf-8")
-// 	w.Write(b)
-// }
-
-// ToJSON to be used for marshalling of Book type
-// func (b URLVerificationEvent) ToJSON() []byte {
-// 	ToJSON, err := json.Marshal(b)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return ToJSON
-// }
-
-// FromJSON to be used for unmarshalling of URLVerificationEvent type
-// func FromJSON(data []byte) URLVerificationEvent {
-// 	book := URLVerificationEvent{}
-// 	err := json.Unmarshal(data, &book)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	return book
-// }

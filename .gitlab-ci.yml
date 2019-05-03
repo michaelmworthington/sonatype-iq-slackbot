@@ -5,6 +5,10 @@ variables:
   # Please edit to your GitLab project
   REPO_NAME: gitlab.com/michaelmworthington/sonatype-iq-slackbot
 
+cache:
+  paths:
+    - .cache
+
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
 # is gitlab.com, and that your repository is namespace/project, and
@@ -12,6 +16,9 @@ variables:
 # repository in /go/src/gitlab.com/namespace/project
 # Thus, making a symbolic link corrects this.
 before_script:
+  - echo "GOMODULES11 = $GOMODULES11"
+  - mkdir -p .cache
+  - export GOPATH="$CI_PROJECT_DIR/.cache"
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
@@ -23,7 +30,6 @@ stages:
 format:
     stage: test
     script:
-      - export GOMODULES11=ON
       - go get
       - go fmt $(go list ./... | grep -v /vendor/)
       - go vet $(go list ./... | grep -v /vendor/)
@@ -32,9 +38,21 @@ format:
 compile:
     stage: build
     script:
-      - export GOMODULES11=ON
       - go get
       - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/mybinary
     artifacts:
       paths:
         - mybinary
+
+policy_eval:
+    stage: test
+    image: sonatype/gitlab-nexus-iq-pipeline:latest
+    script:
+      - echo "Running = /sonatype/evaluate -i sonatype-iq-slackbot $CI_PROJECT_DIR"
+      - /sonatype/evaluate -i sonatype-iq-slackbot $CI_PROJECT_DIR
+      - echo "#########################"
+      - pwd
+      - ls -la
+    artifacts:
+      paths:
+        - policy-eval-report.html

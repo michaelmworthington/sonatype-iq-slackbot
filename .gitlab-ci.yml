@@ -19,13 +19,14 @@ before_script:
   - echo "GOMODULES11 = $GOMODULES11"
   - mkdir -p .cache
   - export GOPATH="$CI_PROJECT_DIR/.cache"
-  - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
-  - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
-  - cd $GOPATH/src/$REPO_NAME
+  #- mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
+  #- ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
+  #- cd $GOPATH/src/$REPO_NAME
 
 stages:
     - test
     - build
+    - policy
 
 format:
     stage: test
@@ -45,7 +46,7 @@ compile:
         - mybinary
 
 policy_eval:
-    stage: test
+    stage: policy
     image: sonatype/gitlab-nexus-iq-pipeline:latest
     script:
       - echo "Running = /sonatype/evaluate -i sonatype-iq-slackbot $CI_PROJECT_DIR"

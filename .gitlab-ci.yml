@@ -23,10 +23,7 @@ stages:
 format:
     stage: test
     script:
-      - go get -u github.com/caarlos0/env
-      - go get -u github.com/joho/godotenv
-      - go get -u github.com/nlopes/slack
-      - go get -u github.com/stretchr/testify/assert
+      - go get
       - go fmt $(go list ./... | grep -v /vendor/)
       - go vet $(go list ./... | grep -v /vendor/)
       - go test -race $(go list ./... | grep -v /vendor/)
@@ -34,9 +31,7 @@ format:
 compile:
     stage: build
     script:
-      - go get -u github.com/caarlos0/env
-      - go get -u github.com/joho/godotenv
-      - go get -u github.com/nlopes/slack
+      - go get
       - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/mybinary
     artifacts:
       paths:

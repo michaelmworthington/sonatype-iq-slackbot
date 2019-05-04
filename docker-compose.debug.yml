@@ -1,0 +1,10 @@
+version: '2.1'
+
+services:
+  sonatype-iq-slackbot:
+    image: sonatype-iq-slackbot
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+        - 9000:9000

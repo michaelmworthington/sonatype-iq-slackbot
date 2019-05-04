@@ -1,0 +1,14 @@
+version: '2.1'
+
+services:
+  sonatype-iq-slackbot:
+    image: sonatype-iq-slackbot:latest
+    build: .
+    ports:
+      - 9000:9000
+  nginx:
+        image: "local-mike:19443/nginx:1.11.9"
+        ports: 
+        - "8080:80"
+        links: 
+        - sonatype-iq-slackbot

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonatype-iq-slackbot-service
+  labels:
+    app: sonatype-iq-slackbot
+    tier: service
+spec:
+  # use NodePort here to be able to access a port on each node
+  type: LoadBalancer
+  ports:
+  - port: 9000
+  selector:
+    app: sonatype-iq-slackbot

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sonatype-iq-slackbot-pod
+  labels:
+    language: go
+    env: test
+spec:
+  containers:
+#  - image: sonatype-iq-slackbot:1.0.2
+  - image: local-mike:19447/michaelmworthington/sonatype-iq-slackbot:1.0.2
+    name: sonatype-iq-slackbot
+    ports:
+    - containerPort: 9000
+      protocol: TCP

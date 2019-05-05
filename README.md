@@ -23,3 +23,14 @@ docker-compose build
 docker-compose up -d
 docker-compose down
 ```
+
+kubernetes (simple test):
+```
+kubectl create -f 01-k8s-pod.yml (pull from local registry - see evernotes)
+```
+
+kubernetes (more advanced test):
+```
+kubectl create -f 02-k8s-deployment.yml
+kubectl create -f 03-k8s-service.yml
+```
